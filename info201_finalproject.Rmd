@@ -1,0 +1,445 @@
+---
+title: "info201_finalproject"
+author: "Shayna Suzuki"
+date: "2024-03-03"
+output: html_document
+---
+
+#### Loading Lebron James data
+```{r, message = FALSE}
+library(tidyverse)
+lebron <- read_delim("../archive/1_lebron_james_shot_chart_1_2023.csv")
+head(lebron, 5)
+tail(lebron, 5)
+```
+
+#### Lebron James percentage of shots made in each quarter
+```{r}
+lebron_quarter <- lebron %>%
+  group_by(qtr, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+order <- c("1st Qtr", "2nd Qtr", "3rd Qtr", "4th Qtr", "1st OT", "2nd OT")
+lebron_quarter$qtr <- factor(lebron_quarter$qtr, levels = order)
+
+# Plot made and missed shots by quarter
+ggplot(lebron_quarter, aes(x = qtr, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "LeBron James Shots Made and Missed by Quarter (2023)",
+       x = "Quarter",
+       y = "Number of Shots",
+       fill = "Shot Outcome",
+       caption = "Green: Made, Red: Missed")
+```
+
+#### Lebron James percentage of shots made during clutch time
+```{r}
+lebron_clutch_time <- lebron %>% 
+  filter(qtr == "4th Qtr" | qtr == "1st OT" | qtr == "2nd OT") %>% 
+  filter(abs(lebron_team_score - opponent_team_score) <= 5) %>% 
+  mutate(Time_Remaining_Minutes = as.numeric(substr(time_remaining, 1, 2)),
+         Time_Remaining_Seconds = as.numeric(substr(time_remaining, 4, 5))) %>%
+  filter(Time_Remaining_Minutes <= 5)
+
+lebron_quarter_clutch <- lebron_clutch_time %>%
+  group_by(qtr, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+ggplot(lebron_quarter_clutch, aes(x = qtr, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "LeBron James Shots Made and Missed by Quarter During Clutch Time (2023)",
+       x = "Quarter",
+       y = "Number of Shots",
+       fill = "Shot Outcome",
+       caption = "Green: Made, Red: Missed")
+```
+
+#### Lebron James shot chart during clutch time vs not clutch time
+```{r}
+lebron$clutch <- ifelse(lebron$qtr %in% c("4th Qtr", "1st OT", "2nd OT") & 
+                        abs(lebron$lebron_team_score - lebron$opponent_team_score) <= 5 & 
+                        as.numeric(substr(lebron$time_remaining, 1, 2)) <= 5, 
+                        "Clutch Time", "Not Clutch Time")
+
+ggplot(lebron, aes(x = left, y = top)) +
+  geom_point(aes(color = result), alpha = 0.6, size = 3) +
+  scale_color_manual(values = c("red", "green"), labels = c("Miss", "Made")) +
+  geom_text(aes(label = shot_type), nudge_y = 1, size = 3, fontface = "bold") +
+  facet_wrap(~ clutch) +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = "LeBron James Shot Chart (2023)",
+       x = "Horizontal Position",
+       y = "Vertical Position",
+       color = "Shot Outcome",
+       subtitle = "Clutch vs. Non-Clutch Situations")
+  
+```
+#### Lebron James shot percentages clutch time vs. not clutch time
+```{r}
+lebron$clutch <- ifelse(lebron$qtr %in% c("4th Qtr", "1st OT", "2nd OT") & 
+                        abs(lebron$lebron_team_score - lebron$opponent_team_score) <= 5 & 
+                        as.numeric(substr(lebron$time_remaining, 1, 2)) <= 5, 
+                        "Clutch Time", "Not Clutch Time")
+
+shot_percentages_lebron <- lebron %>%
+  group_by(clutch, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+ggplot(shot_percentages_lebron, aes(x = clutch, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "LeBron James Shot Count/Percentage Clutch vs. Not Clutch Time (2023)",
+       x = "Clutch",
+       y = "Shot Count",
+       fill = "Shot Made",
+       caption = "Percentage label = Made shot percentage")
+```
+
+#### Loading James Harden data
+```{r}
+harden <- read_delim("../archive/2_james_harden_shot_chart_2023.csv")
+harden <- harden %>% 
+  rename(harden_team_score = lebron_team_score)
+head(harden, 5)
+tail(harden, 5)
+```
+
+
+#### James Harden percentage of shots made in each quarter
+```{r}
+harden_quarter <- harden %>%
+  group_by(qtr, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+order <- c("1st Qtr", "2nd Qtr", "3rd Qtr", "4th Qtr", "1st OT", "2nd OT")
+harden_quarter$qtr <- factor(harden_quarter$qtr, levels = order)
+
+# Plot made and missed shots by quarter
+ggplot(harden_quarter, aes(x = qtr, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "James Harden Shots Made and Missed by Quarter (2023)",
+       x = "Quarter",
+       y = "Number of Shots",
+       fill = "Shot Outcome",
+       caption = "Green: Made, Red: Missed")
+```
+
+#### James Harden percentage of shots made during clutch time
+```{r}
+harden_clutch_time <- harden %>% 
+  filter(qtr == "4th Qtr" | qtr == "1st OT" | qtr == "2nd OT") %>% 
+  filter(abs(harden_team_score - opponent_team_score) <= 5) %>% 
+  mutate(Time_Remaining_Minutes = as.numeric(substr(time_remaining, 1, 2)),
+         Time_Remaining_Seconds = as.numeric(substr(time_remaining, 4, 5))) %>%
+  filter(Time_Remaining_Minutes <= 5)
+
+harden_quarter_clutch <- harden_clutch_time %>%
+  group_by(qtr, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+ggplot(harden_quarter_clutch, aes(x = qtr, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "James Harden Shots Made and Missed by Quarter During Clutch Time (2023)",
+       x = "Quarter",
+       y = "Number of Shots",
+       fill = "Shot Outcome",
+       caption = "Green: Made, Red: Missed")
+```
+
+#### James Harden shot chart during clutch time vs not clutch time
+```{r}
+harden$clutch <- ifelse(harden$qtr %in% c("4th Qtr", "1st OT", "2nd OT") & 
+                        abs(harden$harden_team_score - harden$opponent_team_score) <= 5 & 
+                        as.numeric(substr(harden$time_remaining, 1, 2)) <= 5, 
+                        "Clutch Time", "Not Clutch Time")
+
+ggplot(harden, aes(x = left, y = top)) +
+  geom_point(aes(color = result), alpha = 0.6, size = 3) +
+  scale_color_manual(values = c("red", "green"), labels = c("Miss", "Made")) +
+  geom_text(aes(label = shot_type), nudge_y = 1, size = 3, fontface = "bold") +
+  facet_wrap(~ clutch) +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = "James Harden Shot Chart (2023)",
+       x = "Horizontal Position",
+       y = "Vertical Position",
+       color = "Shot Outcome",
+       subtitle = "Clutch vs. Non-Clutch Situations")
+```
+
+#### Shot percentages clutch time vs. not clutch time
+```{r}
+shot_percentages_harden <- harden %>%
+  group_by(clutch, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+ggplot(shot_percentages_harden, aes(x = clutch, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "James Harden Shot Count/Percentage Clutch vs. Not Clutch Time (2023)",
+       x = "Clutch",
+       y = "Number of shots",
+       fill = "Shot Made",
+       caption = "Percentage label = Shot made percentage")
+```
+
+#### Load Steph Curry data
+```{r}
+curry <- read_delim("../archive/3_stephen_curry_shot_chart_2023.csv")
+curry <- curry %>% 
+  rename(curry_team_score = lebron_team_score)
+head(curry, 5)
+tail(curry, 5)
+```
+
+#### Steph Curry percentage of shots made in each quarter
+```{r}
+curry_quarter <- curry %>%
+  group_by(qtr, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+order <- c("1st Qtr", "2nd Qtr", "3rd Qtr", "4th Qtr", "1st OT", "2nd OT")
+curry_quarter$qtr <- factor(curry_quarter$qtr, levels = order)
+
+# Plot made and missed shots by quarter
+ggplot(curry_quarter, aes(x = qtr, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "Steph Curry Shots Made and Missed by Quarter (2023)",
+       x = "Quarter",
+       y = "Number of Shots",
+       fill = "Shot Outcome",
+       caption = "Green: Made, Red: Missed")
+```
+
+
+#### Steph Curry percentage of shots made during clutch time
+```{r}
+curry_clutch_time <- curry %>% 
+  filter(qtr == "4th Qtr" | qtr == "1st OT" | qtr == "2nd OT") %>% 
+  filter(abs(curry_team_score - opponent_team_score) <= 5) %>% 
+  mutate(Time_Remaining_Minutes = as.numeric(substr(time_remaining, 1, 2)),
+         Time_Remaining_Seconds = as.numeric(substr(time_remaining, 4, 5))) %>%
+  filter(Time_Remaining_Minutes <= 5)
+
+curry_quarter_clutch <- curry_clutch_time %>%
+  group_by(qtr, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+ggplot(curry_quarter_clutch, aes(x = qtr, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "Steph Curry Shots Made and Missed by Quarter During Clutch Time (2023)",
+       x = "Quarter",
+       y = "Number of Shots",
+       fill = "Shot Outcome",
+       caption = "Green: Made, Red: Missed")
+```
+
+#### Steph Curry shot chart during clutch time vs not clutch time
+```{r}
+curry$clutch <- ifelse(curry$qtr %in% c("4th Qtr", "1st OT", "2nd OT") & 
+                        abs(curry$curry_team_score - curry$opponent_team_score) <= 5 & 
+                        as.numeric(substr(curry$time_remaining, 1, 2)) <= 5, 
+                        "Clutch Time", "Not Clutch Time")
+
+ggplot(curry, aes(x = left, y = top)) +
+  geom_point(aes(color = result), alpha = 0.6, size = 3) +
+  scale_color_manual(values = c("red", "green"), labels = c("Miss", "Made")) +
+  geom_text(aes(label = shot_type), nudge_y = 1, size = 3, fontface = "bold") +
+  facet_wrap(~ clutch) +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = "Steph Curry Shot Chart (2023)",
+       x = "Horizontal Position",
+       y = "Vertical Position",
+       color = "Shot Outcome",
+       subtitle = "Clutch vs. Non-Clutch Situations")
+```
+
+#### Steph Curry shot percentages clutch time vs. not clutch time
+```{r}
+shot_percentages_curry <- curry %>%
+  group_by(clutch, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+ggplot(shot_percentages_curry, aes(x = clutch, y = count, fill = factor(result))) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = paste0(round(Shot_Percentage, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3, color = "black") +
+  scale_fill_manual(values = c("TRUE" = "darkgreen", "FALSE" = "darkred")) +
+  labs(title = "Steph Curry Shot Count/Percentage Clutch vs. Not Clutch Time (2023)",
+       x = "Clutch",
+       y = "Shot Count",
+       fill = "Shot Made",
+       caption = "Percentage label = Shot made percentage")
+```
+
+
+#### Merging data sets to compare the number of shots taken by each player during clutch time
+```{r}
+lebron <- lebron %>% mutate(player = "LeBron James")
+harden <- harden %>% mutate(player = "James Harden")
+curry <- curry %>% mutate(player = "Steph Curry")
+
+# Merge the datasets using left_join
+merged_data <- lebron %>%
+  bind_rows(harden) %>%
+  bind_rows(curry) %>%
+  select(player, date, shot_type, clutch, result)
+
+# Filter the merged dataset for clutch time shots
+clutch_data_all <- merged_data %>%
+  filter(clutch == "Clutch Time")
+
+# Group the data by player and shot type (2-pointers or 3-pointers)
+clutch_summary <- clutch_data_all %>%
+  group_by(player, shot_type) %>%
+  summarise(count = n()) %>% 
+  group_by(player) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+print(clutch_summary)
+
+
+# Create a visualization to compare the number of 2's and 3's taken by each player during clutch time
+ggplot(clutch_summary, aes(x = player, y = count, fill = factor(shot_type))) +
+  geom_bar(stat = "identity",position = "dodge") +
+  labs(title = "Number of shot types taken by each player during clutch time",
+       x = "Player",
+       y = "Number of Shots",
+       fill = "Shot Type",
+       caption = "Number represents number of shots") +
+  geom_text(aes(label = paste0(round(count, 1))),
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3, color = "black")
+```
+#### Comparing shot percentage during clutch time between players 
+```{r}
+num_clutch_games <- merged_data %>%
+  filter(clutch == "Clutch Time") %>%
+  group_by(player, date) %>%
+  summarise() %>%
+  ungroup() %>%
+  group_by(player) %>%
+  summarise(num_games = n_distinct(date))
+
+# Print the number of clutch time games for each player
+print(num_clutch_games) ## Comparable number of clutch games
+
+# Table that compares shot percentage for each player during clutch time
+clutch_percentage_compare <- merged_data %>% 
+  filter(clutch == "Clutch Time") %>%
+  group_by(player) %>%
+  summarise(total_shots = n(),
+            shots_made = sum(result == TRUE),
+            shot_percentage = shots_made / total_shots * 100)
+
+clutch_percentage_compare
+  
+```
+#### James Harden Shot Chart by Quarter
+```{r}
+harden$clutch <- ifelse(harden$qtr %in% c("4th Qtr", "1st OT", "2nd OT") & 
+                        abs(harden$harden_team_score - harden$opponent_team_score) <= 5 & 
+                        as.numeric(substr(harden$time_remaining, 1, 2)) <= 5, 
+                        "Clutch Time", "Not Clutch Time")
+
+ggplot(harden, aes(x = left, y = top)) +
+  geom_point(aes(color = result), alpha = 0.6, size = 3) +
+  scale_color_manual(values = c("red", "green"), labels = c("Miss", "Made")) +
+  geom_text(aes(label = shot_type), nudge_y = 1, size = 3, fontface = "bold") +
+  facet_wrap(~ qtr) +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = "James Harden Shot Chart (2023)",
+       x = "Horizontal Position",
+       y = "Vertical Position",
+       color = "Shot Outcome",
+       subtitle = "Quarter Comparison")
+```
+
+```{r}
+lebron_james <- read_delim("../archive/1_lebron_james_shot_chart_1_2023.csv")
+lebron_altered <- lebron_james %>%
+  group_by(lead, result) %>%
+  summarise(count = n()) %>%
+  mutate(Shot_Percentage = count / sum(count) * 100)
+
+print(lebron_altered)
+
+ggplot(lebron_altered, aes(x = lead, y = count, fill = factor(result), label = paste0(round(Shot_Percentage, 1), "%"))) +
+  geom_col(position = "dodge") +
+  geom_text(position = position_dodge(width = 0.9), vjust = -0.5, size = 3, color = "black") +
+  labs(title = "Lead Effect on Shot Outcomes For LeBron James",
+       x = "Lead in the Game",
+       y = "Number of Shots",
+       fill = "Outcome") +
+  scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "pink"),
+                     labels = c("Made", "Missed"))
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
